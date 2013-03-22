@@ -14,9 +14,7 @@ namespace EugenePetrenko.AudioBroadcastr
       Console.Out.WriteLine("");
 
       new Http().Start();
-      Console.In.ReadLine();
 
-      return;
       Console.Out.WriteLine("Looking for audio capture devices:");
       for (int n = 0; n < WaveIn.DeviceCount; n++)
       {

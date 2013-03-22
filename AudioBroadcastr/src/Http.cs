@@ -43,16 +43,41 @@ namespace EugenePetrenko.AudioBroadcastr
       Console.WriteLine("Connected with a client: {0}: {1} ", iep.Address, iep.Port);
 
       using (var stream = newConn.GetStream())
-      using(var sr = new StreamReader(stream))
+      using (var sr = new StreamReader(stream))
       using (var sw = new StreamWriter(stream))
       {
-        sw.Write("HTTP/1.1 200 Not Found\r\n");
-        sw.Write("Content-Type: text/plain; charset=utf-8\r\n");
-        sw.Write("\r\n");
-        sw.Write("\r\n");
-        sw.Write("\r\n");
-        sw.Write("No Data For you now\r\n");
-        sw.Flush();
+        var request = sr.ReadLine();
+        if (request == null) return;
+        
+        Console.Out.WriteLine("Request: {0}", request);
+        var path = request.Split(' ')[1];
+
+        if (path.StartsWith("/mp3"))
+        {
+          sw.WriteLine("HTTP/1.1 200 OK");
+          sw.WriteLine("Content-Type: audio/mpeg");
+          sw.WriteLine();
+          sw.Flush();
+
+          while (true)
+          {
+            using (var file = File.OpenRead(@"E:\Dropbox\voiceim.mp3"))
+            {
+              file.CopyTo(stream, 8129);
+            }            
+          }
+        }
+        else
+        {
+          sw.Write("HTTP/1.1 200 OK\r\n");
+          sw.Write("Content-Type: text/plain; charset=utf-8\r\n");
+          sw.Write("\r\n");
+          sw.Write("\r\n");
+          sw.Write("\r\n");
+          sw.Write("No Data For you now\r\n");
+          sw.Flush();
+        }
+
 
         //read all data from request
         String line;
