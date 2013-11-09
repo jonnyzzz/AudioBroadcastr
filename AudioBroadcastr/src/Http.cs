@@ -3,7 +3,6 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using NAudio.Wave;
 
 namespace EugenePetrenko.AudioBroadcastr
 {
@@ -15,7 +14,7 @@ namespace EugenePetrenko.AudioBroadcastr
     private event Action<byte[], int> OnData;
     public Func<Stream, Stream> NewClientProxy = x=>x;
     
-    public void BroadcastData(WaveFormat format, byte[] data, int sz)
+    public void BroadcastData(byte[] data, int sz)
     {
       if (OnData != null)
         OnData(data, sz);
@@ -99,8 +98,8 @@ namespace EugenePetrenko.AudioBroadcastr
 
     private void HandleStreamingClient(Stream output)
     {
+      var exitEvent = new ManualResetEvent(false);
       var sw = NewClientProxy(output);
-      sw.Flush();
 
       Action<byte[], int> handler = null;
       handler = (bytes, i) =>
@@ -108,32 +107,21 @@ namespace EugenePetrenko.AudioBroadcastr
         try
         {
           sw.Write(bytes, 0, i);
-          sw.Flush();
         }
-        catch
+        catch(Exception e)
         {
+          Console.Out.WriteLine(e);
           OnData -= handler;
+          exitEvent.Set();
         }
       };
 
-      try
-      {
-        OnData += handler;
-        //thread must not exit to let the code write data into the stream
-        Snooze();
-      }
-      finally
-      {
-        OnData -= handler;
-      }
-    }
+      OnData += handler;
+      
+      WaitHandle.WaitAny(new WaitHandle[]{myExitEvent, exitEvent});
 
-    private void Snooze()
-    {
-      myExitEvent.WaitOne();
+      OnData -= handler;
     }
   }
-
-  
 
 }

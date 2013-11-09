@@ -42,6 +42,8 @@ namespace EugenePetrenko.AudioBroadcastr
     }
 
 
+    public static readonly Guid MEDIASUBTYPE_IEEE_FLOAT = new Guid("00000003-0000-0010-8000-00aa00389b71");
+    
     private static void StartStreaming(Http http)
     {
       Console.Out.WriteLine("Looking for audio capture devices:");
@@ -60,28 +62,23 @@ namespace EugenePetrenko.AudioBroadcastr
       var capture = new WasapiLoopbackCapture();
 
       Console.Out.WriteLine("Capture format: {0}", capture.WaveFormat);
+
+      
       if (capture.WaveFormat is WaveFormatExtensible)
       {
         Console.Out.WriteLine("  sub-format: {0}", ((WaveFormatExtensible) capture.WaveFormat).SubFormat);
       }
       Console.Out.WriteLine("");
-      
 
-      var pipe = new PipeStream();
-      capture.DataAvailable += (_, a) => pipe.PushData(a.Buffer, a.BytesRecorded);
-
-      
-      
-      new MicroThreadPool().EnqueueTask(() =>
+      var format = capture.WaveFormat;
+      if (format is WaveFormatExtensible && ((WaveFormatExtensible) format).SubFormat == MEDIASUBTYPE_IEEE_FLOAT)
       {
-        var nativeStream = WaveFormatConversionStream.CreatePcmStream(new RawSourceWaveStream(pipe, capture.WaveFormat));
-        http.NewClientProxy = sw => new LameMP3FileWriter(sw, nativeStream.WaveFormat, LAMEPreset.ABR_128);
-        
-        var buffer = new byte[1024 * 1024];
-        int sz = nativeStream.Read(buffer, 0, buffer.Length);
+        format = WaveFormat.CreateIeeeFloatWaveFormat(format.SampleRate, format.Channels);
+      }
 
-        http.BroadcastData(capture.WaveFormat, buffer, sz);
-      });
+      http.NewClientProxy = sw => new LameMP3FileWriter(sw, format, LAMEPreset.EXTREME_FAST);
+      capture.DataAvailable += (_,a) => http.BroadcastData(a.Buffer, a.BytesRecorded);
+
 
       Console.Out.WriteLine("Loopback wave format is: {0}", capture.WaveFormat);
       capture.StartRecording();
