@@ -33,6 +33,7 @@ namespace EugenePetrenko.AudioBroadcastr
     public void Stop()
     {
       myIsRunning = false;
+      myExitEvent.Set();
       myServer.Stop();
     }
 
@@ -64,7 +65,7 @@ namespace EugenePetrenko.AudioBroadcastr
         if (path.StartsWith("/mp3"))
         {
           sw.WriteLine("HTTP/1.1 200 OK");
-          sw.WriteLine("Content-Type: audio/wav");
+          sw.WriteLine("Content-Type: audio/mpeg");
           sw.WriteLine("Transfer-Encoding: identity");
           sw.WriteLine("Connection: close");
           sw.WriteLine();
@@ -74,7 +75,7 @@ namespace EugenePetrenko.AudioBroadcastr
         }
         else
         {
-          sw.Write("HTTP/1.1 200 OK\r\n");
+          sw.Write("HTTP/1.1 404 Not Found\r\n");
           sw.Write("Content-Type: text/plain; charset=utf-8\r\n");
           sw.Write("\r\n");
           sw.Write("\r\n");
