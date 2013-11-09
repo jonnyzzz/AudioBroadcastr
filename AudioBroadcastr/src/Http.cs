@@ -12,8 +12,9 @@ namespace EugenePetrenko.AudioBroadcastr
     private volatile bool myIsRunning;
     private TcpListener myServer;
     private event Action<byte[], int> OnData; 
+    public Action<StreamWriter> OnNewClient = x => { }; 
     
-    public void BroadcastData(byte[] data, int sz)
+    public void BroadcastData(WaveFormat format, byte[] data, int sz)
     {
       if (OnData != null)
         OnData(data, sz);
@@ -64,8 +65,13 @@ namespace EugenePetrenko.AudioBroadcastr
         {
           sw.WriteLine("HTTP/1.1 200 OK");
           sw.WriteLine("Content-Type: audio/wav");
+          sw.WriteLine("Transfer-Encoding: identity");
+          sw.WriteLine("Connection: close");
+          sw.WriteLine();
           sw.WriteLine();
           sw.Flush();
+
+          OnNewClient(sw);
 
           Action<byte[], int> handler = null;
           handler = (bytes, i) =>
@@ -73,6 +79,7 @@ namespace EugenePetrenko.AudioBroadcastr
               try
               {
                 sw.BaseStream.Write(bytes, 0, i);
+                sw.Flush();
               }
               catch
               {

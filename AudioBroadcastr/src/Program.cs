@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using NAudio.CoreAudioApi;
 using NAudio.MediaFoundation;
+using NAudio.SoundFont;
 using NAudio.Wave;
 using ServiceDiscovery;
 
@@ -32,13 +34,35 @@ namespace EugenePetrenko.AudioBroadcastr
       }
 
 */
+      StartStreaming(http);
+      
 
-      StartStreaming(http.BroadcastData);
-
-      Console.In.ReadLine();
+      Console.Read();
     }
 
-    private static void StartStreaming(Action<byte[], int> onData)
+    private static byte[] GenerateWavHeader(WaveFormat format)
+    {
+      var ms = new MemoryStream();
+      var writer = new BinaryWriter(ms);
+
+      writer.Write(Encoding.UTF8.GetBytes("RIFF"));
+      writer.Write(0);
+      writer.Write(Encoding.UTF8.GetBytes("WAVE"));
+      writer.Write(Encoding.UTF8.GetBytes("fmt "));
+      format.Serialize(writer);
+
+      writer.Write(Encoding.UTF8.GetBytes("fact"));
+      writer.Write(4);
+      writer.Flush();
+      writer.Write(0);
+
+      writer.Write(Encoding.UTF8.GetBytes("data"));
+      writer.Close();
+      ms.Close();
+      return ms.GetBuffer();
+    }
+
+    private static void StartStreaming(Http http)
     {
       Console.Out.WriteLine("Looking for audio capture devices:");
       for (int n = 0; n < WaveIn.DeviceCount; n++)
@@ -55,10 +79,16 @@ namespace EugenePetrenko.AudioBroadcastr
       Console.Out.WriteLine("Starting from default device");
       var capture = new WasapiLoopbackCapture();
 
-      capture.DataAvailable += (sender, eventArgs) => onData(eventArgs.Buffer, eventArgs.BytesRecorded);
+      http.OnNewClient = result => result.Write(GenerateWavHeader(capture.WaveFormat));
+      capture.DataAvailable += (sender, eventArgs) => http.BroadcastData(capture.WaveFormat, eventArgs.Buffer, eventArgs.BytesRecorded);
 
       Console.Out.WriteLine("Loopback wave format is: {0}", capture.WaveFormat);
       capture.StartRecording();
+
+      
+      Console.Read();
+      Console.Out.WriteLine("Terminating capture...");
+      capture.StopRecording();
     }
   }
 }
