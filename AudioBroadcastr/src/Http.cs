@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using NAudio.Wave;
 
 namespace EugenePetrenko.AudioBroadcastr
 {
@@ -10,7 +11,14 @@ namespace EugenePetrenko.AudioBroadcastr
     private readonly MicroThreadPool myPool = new MicroThreadPool();
     private volatile bool myIsRunning;
     private TcpListener myServer;
+    private event Action<byte[], int> OnData; 
     
+    public void BroadcastData(byte[] data, int sz)
+    {
+      if (OnData != null)
+        OnData(data, sz);
+    }
+
     public void Start()
     {
       myServer = new TcpListener(IPAddress.Any, 9765);
@@ -55,17 +63,23 @@ namespace EugenePetrenko.AudioBroadcastr
         if (path.StartsWith("/mp3"))
         {
           sw.WriteLine("HTTP/1.1 200 OK");
-          sw.WriteLine("Content-Type: audio/mpeg");
+          sw.WriteLine("Content-Type: audio/wav");
           sw.WriteLine();
           sw.Flush();
 
-          while (true)
-          {
-            using (var file = File.OpenRead(@"E:\Dropbox\voiceim.mp3"))
+          Action<byte[], int> handler = null;
+          handler = (bytes, i) =>
             {
-              file.CopyTo(stream, 8129);
-            }            
-          }
+              try
+              {
+                sw.BaseStream.Write(bytes, 0, i);
+              }
+              catch
+              {
+                OnData -= handler;
+              }
+            };
+          OnData += handler;
         }
         else
         {
