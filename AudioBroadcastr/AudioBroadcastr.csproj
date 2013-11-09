@@ -39,6 +39,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NAudio.1.7-alpha04\lib\net35\NAudio.dll</HintPath>
     </Reference>
+    <Reference Include="NAudio.Lame">
+      <HintPath>..\packages\NAudio.Lame.1.0.0\lib\net20\NAudio.Lame.dll</HintPath>
+    </Reference>
     <Reference Include="ServiceDiscovery">
       <HintPath>..\packages\ServiceDiscovery.1.0.0.0\lib\net40\ServiceDiscovery.dll</HintPath>
     </Reference>
@@ -56,6 +59,7 @@
   <ItemGroup>
     <Compile Include="src\Http.cs" />
     <Compile Include="src\MicroThreadPool.cs" />
+    <Compile Include="src\PipeStream.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\Utils.cs" />
@@ -63,6 +67,11 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="libmp3lame.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

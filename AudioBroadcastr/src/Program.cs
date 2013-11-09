@@ -1,8 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using NAudio.CoreAudioApi;
+using NAudio.Lame;
 using NAudio.MediaFoundation;
 using NAudio.SoundFont;
 using NAudio.Wave;
@@ -40,27 +41,6 @@ namespace EugenePetrenko.AudioBroadcastr
       Console.Read();
     }
 
-    private static byte[] GenerateWavHeader(WaveFormat format)
-    {
-      var ms = new MemoryStream();
-      var writer = new BinaryWriter(ms);
-
-      writer.Write(Encoding.UTF8.GetBytes("RIFF"));
-      writer.Write(0);
-      writer.Write(Encoding.UTF8.GetBytes("WAVE"));
-      writer.Write(Encoding.UTF8.GetBytes("fmt "));
-      format.Serialize(writer);
-
-      writer.Write(Encoding.UTF8.GetBytes("fact"));
-      writer.Write(4);
-      writer.Flush();
-      writer.Write(0);
-
-      writer.Write(Encoding.UTF8.GetBytes("data"));
-      writer.Close();
-      ms.Close();
-      return ms.GetBuffer();
-    }
 
     private static void StartStreaming(Http http)
     {
@@ -79,12 +59,32 @@ namespace EugenePetrenko.AudioBroadcastr
       Console.Out.WriteLine("Starting from default device");
       var capture = new WasapiLoopbackCapture();
 
-      http.OnNewClient = result => result.Write(GenerateWavHeader(capture.WaveFormat));
-      capture.DataAvailable += (sender, eventArgs) => http.BroadcastData(capture.WaveFormat, eventArgs.Buffer, eventArgs.BytesRecorded);
+      Console.Out.WriteLine("Capture format: {0}", capture.WaveFormat);
+      if (capture.WaveFormat is WaveFormatExtensible)
+      {
+        Console.Out.WriteLine("  sub-format: {0}", ((WaveFormatExtensible) capture.WaveFormat).SubFormat);
+      }
+      Console.Out.WriteLine("");
+      
+
+      var pipe = new PipeStream();
+      capture.DataAvailable += (_, a) => pipe.PushData(a.Buffer, a.BytesRecorded);
+
+      
+      
+      new MicroThreadPool().EnqueueTask(() =>
+      {
+        var nativeStream = WaveFormatConversionStream.CreatePcmStream(new RawSourceWaveStream(pipe, capture.WaveFormat));
+        http.NewClientProxy = sw => new LameMP3FileWriter(sw, nativeStream.WaveFormat, LAMEPreset.ABR_128);
+        
+        var buffer = new byte[1024 * 1024];
+        int sz = nativeStream.Read(buffer, 0, buffer.Length);
+
+        http.BroadcastData(capture.WaveFormat, buffer, sz);
+      });
 
       Console.Out.WriteLine("Loopback wave format is: {0}", capture.WaveFormat);
       capture.StartRecording();
-
       
       Console.Read();
       Console.Out.WriteLine("Terminating capture...");

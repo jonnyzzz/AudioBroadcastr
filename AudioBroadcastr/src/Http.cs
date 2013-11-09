@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using NAudio.Wave;
 
 namespace EugenePetrenko.AudioBroadcastr
@@ -11,8 +12,8 @@ namespace EugenePetrenko.AudioBroadcastr
     private readonly MicroThreadPool myPool = new MicroThreadPool();
     private volatile bool myIsRunning;
     private TcpListener myServer;
-    private event Action<byte[], int> OnData; 
-    public Action<StreamWriter> OnNewClient = x => { }; 
+    private event Action<byte[], int> OnData;
+    public Func<Stream, Stream> NewClientProxy = x=>x;
     
     public void BroadcastData(WaveFormat format, byte[] data, int sz)
     {
@@ -68,25 +69,9 @@ namespace EugenePetrenko.AudioBroadcastr
           sw.WriteLine("Transfer-Encoding: identity");
           sw.WriteLine("Connection: close");
           sw.WriteLine();
-          sw.WriteLine();
           sw.Flush();
 
-          OnNewClient(sw);
-
-          Action<byte[], int> handler = null;
-          handler = (bytes, i) =>
-            {
-              try
-              {
-                sw.BaseStream.Write(bytes, 0, i);
-                sw.Flush();
-              }
-              catch
-              {
-                OnData -= handler;
-              }
-            };
-          OnData += handler;
+          HandleStreamingClient(sw.BaseStream);      
         }
         else
         {
@@ -108,5 +93,47 @@ namespace EugenePetrenko.AudioBroadcastr
         }
       }
     }
+
+
+    private readonly ManualResetEvent myExitEvent = new ManualResetEvent(false);
+
+    private void HandleStreamingClient(Stream output)
+    {
+      var sw = NewClientProxy(output);
+      sw.Flush();
+
+      Action<byte[], int> handler = null;
+      handler = (bytes, i) =>
+      {
+        try
+        {
+          sw.Write(bytes, 0, i);
+          sw.Flush();
+        }
+        catch
+        {
+          OnData -= handler;
+        }
+      };
+
+      try
+      {
+        OnData += handler;
+        //thread must not exit to let the code write data into the stream
+        Snooze();
+      }
+      finally
+      {
+        OnData -= handler;
+      }
+    }
+
+    private void Snooze()
+    {
+      myExitEvent.WaitOne();
+    }
   }
+
+  
+
 }
