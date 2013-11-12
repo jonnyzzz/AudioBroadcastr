@@ -1,12 +1,22 @@
-Audio broadcasting app to capture what-u-head audio and 
-to send it to a Pioneer *921 as audio stream
+Audio broadcasting app
+=======================
 
-Work is in progress. Current state supports only capture (that to NAudio),
-conversion to MP3 and micro-http server that serves the MP3 at `http://<host>:9765/mp3`
+It 
+* Captures all 'what-u-head' audio
+* Hosts an MP3 http stream (aka http://0.0.0.0:9775/mp3) for it
+* Searches all capable UPNP devices and sends audio on it
 
-Next is to make this capable to UPNP, so home recivers could play the stream
 
 License
 =======
 MIT
+
+
+Thanks
+======
+
+Good HOW-TO on UPnP
+http://www.codeproject.com/Articles/458807/UPnP-code-for-Windows-8
+
+http://developer.lgappstv.com/TV_HELP/index.jsp?topic=%2Flge.tvsdk.references.book%2Fhtml%2FUDAP%2FUDAP%2FM+SEARCH+Request.htm
 
