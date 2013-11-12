@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace EugenePetrenko.AudioBroadcastr
@@ -14,6 +17,7 @@ namespace EugenePetrenko.AudioBroadcastr
     private TcpListener myServer;
     private event Action<byte[], int> OnData;
     public Func<Stream, Stream> NewClientProxy = x=>x;
+    private readonly int myPort = 9775;
     
     public void BroadcastData(byte[] data, int sz)
     {
@@ -23,7 +27,7 @@ namespace EugenePetrenko.AudioBroadcastr
 
     public void Start()
     {
-      myServer = new TcpListener(IPAddress.Any, 9765);
+      myServer = new TcpListener(IPAddress.Any, myPort);
       myServer.Start();
       Console.WriteLine("Listening for connections at {0}", myServer.LocalEndpoint);
 
@@ -43,8 +47,15 @@ namespace EugenePetrenko.AudioBroadcastr
       int id = 10000;
       while (myIsRunning)
       {
-        var newConn = myServer.AcceptTcpClient();
-        myPool.EnqueueTask(() => ProcessRequest(id++, newConn));
+        try
+        {
+          var newConn = myServer.AcceptTcpClient();
+          myPool.EnqueueTask(() => ProcessRequest(id++, newConn));
+        }
+        catch (SocketException e)
+        {
+          //NOP
+        }
       }
     }
 
@@ -157,6 +168,43 @@ namespace EugenePetrenko.AudioBroadcastr
         Console.Out.WriteLine(id + "    " + line);
       }
     }
+
+    private static int StartIndex(string s1, string s2)
+    {
+      if (s1.Length == 0 || s2.Length == 0) return 0;
+      var min = Math.Min(s1.Length, s2.Length);
+      for (int i = 0; i < min; i++)
+      {
+        if (s1[i] != s2[i])
+          return i;
+      }
+      return min+1;
+    }
+
+    private static string TrimProtocol(string s)
+    {
+      return Regex.Replace(s, "https?://", "");
+    }
+
+    public string ResolveMp3StreamUrl(string av)
+    {
+      var host = LocalIPAddress.Value
+        .Select(x => new {host = x, index = StartIndex(TrimProtocol(av), x)})
+        .OrderBy(x => -x.index)
+        .First()
+        .host;
+
+      return "http://" + host + ":" + myPort + "/mp3.mp3";
+    }
+
+    private readonly Lazy<IEnumerable<string>> LocalIPAddress = new Lazy<IEnumerable<string>>(
+      () =>
+        NetworkInterface.GetAllNetworkInterfaces()
+          .SelectMany(x => x.GetIPProperties().UnicastAddresses)
+          .Select(X => X.Address)
+          .Select(X => X.ToString())
+          .Distinct()
+          .ToArray());
   }
 
 }
