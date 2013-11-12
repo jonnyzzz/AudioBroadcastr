@@ -44,9 +44,6 @@
     <Reference Include="NAudio.Lame">
       <HintPath>..\packages\NAudio.Lame.1.0.0\lib\net20\NAudio.Lame.dll</HintPath>
     </Reference>
-    <Reference Include="ServiceDiscovery">
-      <HintPath>..\packages\ServiceDiscovery.1.0.0.0\lib\net40\ServiceDiscovery.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -54,9 +51,6 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="ZeroconfService">
-      <HintPath>..\packages\ZeroconfService.0.6.0.0\lib\net40\ZeroconfService.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\Http.cs" />

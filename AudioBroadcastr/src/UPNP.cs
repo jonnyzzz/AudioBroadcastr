@@ -25,11 +25,11 @@ namespace EugenePetrenko.AudioBroadcastr
     {
       var multicastEndPoint = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
       var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-      socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, false);
+      socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
       socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership,
         new MulticastOption(multicastEndPoint.Address, IPAddress.Any));
       socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 80);
-      socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, false);
+      socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
       socket.Bind(new IPEndPoint(IPAddress.Any, myMulticastListenPort++));
 
       Console.WriteLine("UDP-Socket setup done...\r\n");
@@ -43,14 +43,13 @@ namespace EugenePetrenko.AudioBroadcastr
         "USER-AGENT: jonnyzzz\r\n" +
         "\r\n";
 
-      
       myPool.EnqueueTask(() =>
       {
         bool gotResponse = false;
         var endTime = DateTime.Now + TimeSpan.FromSeconds(5);
         while (endTime > DateTime.Now)
         {
-          if (socket.Available <= 0)
+          if (socket.Available < 10)
           {
             Thread.Sleep(TimeSpan.FromMilliseconds(5));
             continue;
