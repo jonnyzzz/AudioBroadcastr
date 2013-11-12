@@ -73,6 +73,7 @@ namespace EugenePetrenko.AudioBroadcastr
         Console.Out.WriteLine("M-Search completed");
       });
 
+      Thread.Sleep(TimeSpan.FromMilliseconds(500));
       var message = Encoding.UTF8.GetBytes(broadcastString);
       socket.SendTo(message, SocketFlags.None, multicastEndPoint);
       Console.WriteLine("M-Search multicast sent...");
